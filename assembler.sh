@@ -1,16 +1,6 @@
 #!/bin/bash
-# assembler.sh - assembles a .vsc program into a .bin file
-#
-# .vsc format:
-#   line 1        : number of data values (N)
-#   next N lines  : data values (decimal, one byte each)
-#   remaining     : instructions as OPCODE,A,B
-#
-# Each instruction becomes 2 bytes:
-#   byte 1 = (opcode number << 2) | A
-#   byte 2 = B
-
-# ---------- Argument checks ----------
+# Assembler: converts a .vsc file into a .bin file
+# Argument checks
 if [ $# -eq 0 ]; then
     echo "usage: no argument is provided"
     exit 1
@@ -19,10 +9,8 @@ if [ $# -gt 1 ]; then
     echo "usage: more than one arguments are provided"
     exit 1
 fi
-
 input="$1"
-
-# ---------- File checks (order matters) ----------
+# File checks
 if [ -d "$input" ]; then
     echo "usage: input is not a file or it does not exist"
     exit 1
@@ -39,10 +27,8 @@ if [ -z "$(tr -d '[:space:]' < "$input")" ]; then
     echo "usage: the file is empty – no .bin file is produced"
     exit 1
 fi
-
 output="${input%.vsc}.bin"
-
-# ---------- Opcode table ----------
+# Opcode table
 opcode_num() {
     case "$1" in
         LOAD)  echo 1 ;;
@@ -54,19 +40,15 @@ opcode_num() {
         *)     echo "" ;;
     esac
 }
-
-# ---------- Read file (strip Windows \r and blank lines) ----------
+# Read file
 mapfile -t lines < <(tr -d '\r' < "$input" | sed '/^[[:space:]]*$/d')
-
 bytes=()
 count=${lines[0]}
 has_addsub=0
-
 # Data section
 for (( i = 1; i <= count; i++ )); do
     bytes+=( "$(printf '%02x' "${lines[$i]}")" )
 done
-
 # Instruction section
 for (( i = count + 1; i < ${#lines[@]}; i++ )); do
     IFS=',' read -r op a b <<< "${lines[$i]}"
@@ -80,21 +62,17 @@ for (( i = count + 1; i < ${#lines[@]}; i++ )); do
     bytes+=( "$(printf '%02x' $(( (num << 2) | a )))" )
     bytes+=( "$(printf '%02x' "$b")" )
 done
-
-# ---------- Program type ----------
+# Program type
 if [ $has_addsub -eq 1 ]; then
     echo "It is an ADD/SUB program"
 else
     echo "It is a QUIT program"
 fi
-
-# ---------- Write .bin and show it ----------
+# Write and display .bin file
 : > "$output"
 for byte in "${bytes[@]}"; do
     printf "\\x$byte" >> "$output"
 done
-
 echo "The content of the .bin file is"
 od -An -v -tx1 "$output" | tr -s ' ' '\n' | sed '/^$/d'
-
 exit 0
