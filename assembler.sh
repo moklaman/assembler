@@ -80,3 +80,21 @@ for (( i = count + 1; i < ${#lines[@]}; i++ )); do
     bytes+=( "$(printf '%02x' $(( (num << 2) | a )))" )
     bytes+=( "$(printf '%02x' "$b")" )
 done
+
+# ---------- Program type ----------
+if [ $has_addsub -eq 1 ]; then
+    echo "It is an ADD/SUB program"
+else
+    echo "It is a QUIT program"
+fi
+
+# ---------- Write .bin and show it ----------
+: > "$output"
+for byte in "${bytes[@]}"; do
+    printf "\\x$byte" >> "$output"
+done
+
+echo "The content of the .bin file is"
+od -An -v -tx1 "$output" | tr -s ' ' '\n' | sed '/^$/d'
+
+exit 0
